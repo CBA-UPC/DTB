@@ -1,0 +1,7 @@
+{
+    "whitelisted_hosts":["static.twitchcdn.net","static.xx.fbcdn.net","ajax.googleapis.com"],
+
+    "whitelisted_urls":[],
+
+    "whitelisted_matches":["ttvnw.net"]
+}

@@ -1,12 +1,12 @@
 {
   "manifest_version": 2,
   "name": "Deep Tracking Blocker",
-  "version": "0.6",
+  "version": "0.8",
 
   "description": "Block trackers and others element of the internet that vulnerate your privacy",
   "homepage_url": "https://github.com/CBA-UPC/DTB",
 
-  "permissions": ["webRequest","webRequestBlocking","<all_urls>","activeTab"],
+  "permissions": ["webRequest","webRequestBlocking","<all_urls>","activeTab", "storage"],
 
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
 

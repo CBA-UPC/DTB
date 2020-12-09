@@ -16,29 +16,54 @@
  */
 
 function create_host_section(host){
-    let div = document.createElement("div");
-    div.id = host;
 
+
+    let hostdiv = document.createElement("div");
+    hostdiv.id = host+"header";
     let sectionTitle = document.createElement("h3");
+    sectionTitle.id = host+"title";
     sectionTitle.appendChild(document.createTextNode("Host: " + host));
-    div.appendChild(sectionTitle);
+
 
     let label_host = document.createElement("label");
     let checkbox_host = document.createElement("input");
     checkbox_host.type = "checkbox";    // make the element a checkbox
-    checkbox_host.id = host+"checkbox";
+    checkbox_host.id = host + "checkbox";
     checkbox_host.name = host + "checkbox";      // give it a name we can check on the server side
     checkbox_host.value = host;
     label_host.appendChild(checkbox_host);   // add the box to the element
     sectionTitle.appendChild(label_host);
 
-    document.getElementById('blocked_urls').appendChild(div);
+    //in the title we have the host name + the checkbox, we want to add a hide button for the urls
+    let contentdiv = document.createElement("div");
+    contentdiv.id = host;
+    contentdiv.style.display = "none";
+
+    hostdiv.appendChild(sectionTitle);
+    hostdiv.appendChild(contentdiv);
+
+    let hideButton = document.createElement("input");
+    hideButton.type = "button";
+    hideButton.value = "v";
+    hideButton.onclick = function(){
+        if(document.getElementById(host).style.display == "none"){
+            document.getElementById(host).style.display = "block";
+        }
+        else {
+            document.getElementById(host).style.display = "none";
+        }
+    };
+
+    sectionTitle.appendChild(hideButton);
+
+    document.getElementById('blocked_urls').appendChild(hostdiv);
+
 
     checkbox_host.addEventListener( 'change', function() {
     if(this.checked) {
-        chrome.extension.sendRequest({method: 'add_host_exception', data: checkbox_host.value}, function(response) {});
+        chrome.extension.sendMessage({method: 'add_host_exception', data: checkbox_host.value}, function(response) {});
     } else {
-        chrome.extension.sendRequest({method: 'delete_host_exception', data: checkbox_host.value}, function(response) {});
+        chrome.extension.sendMessage({method: 'delete_host_exception', data: checkbox_host.value}, function(response) {});
         };
     });
 }
@@ -64,15 +89,15 @@ function createURLCheckbox(item){
 
     checkbox.addEventListener( 'change', function() {
     if(this.checked) {
-        chrome.extension.sendRequest({method: 'add_url_exception', data: checkbox.value}, function(response) {});
+        chrome.extension.sendMessage({method: 'add_url_exception', data: checkbox.value}, function(response) {});
     } else {
-        chrome.extension.sendRequest({method: 'delete_url_exception', data: checkbox.value}, function(response) {});
+        chrome.extension.sendMessage({method: 'delete_url_exception', data: checkbox.value}, function(response) {});
     }
 });
 };
 
 function get_allowed_hosts(){
-    chrome.extension.sendRequest({method: 'get_allowed_hosts'}, function(response) {
+    chrome.extension.sendMessage({method: 'get_allowed_hosts'}, function(response) {
         //alert(JSON.stringify(response));
         if(response && response.length > 0){
             for (let i in response){
@@ -87,7 +112,7 @@ function get_allowed_hosts(){
 
 
 function get_blocked_urls(){
-    chrome.extension.sendRequest({method: 'get_blocked_urls'}, function(response) {
+    chrome.extension.sendMessage({method: 'get_blocked_urls'}, function(response) {
         //alert(JSON.stringify(response));
         if(response && response.length > 0){
             let host_array = [];
@@ -109,33 +134,39 @@ function get_blocked_urls(){
 function checkEnabled(){
     onoffButton = document.getElementById('onoffButton');
 
-    chrome.extension.sendRequest({method:'get_enabled'}, function(response){
+    chrome.extension.sendMessage({method:'get_enabled'}, function(response){
         onoffButton.checked = response;
     });
 
-    onoffButton.addEventListener( 'change', function() {
-        chrome.extension.sendRequest({method: 'filterCheck', data: onoffButton.checked}, function(response) {});
+    onoffButton.addEventListener('change', function() {
+        chrome.extension.sendMessage({method: 'filterCheck', data: onoffButton.checked}, function(response) {});
     });
 };
 
-// Add listener to receive messages from background page
-//chrome.extension.onRequest.addListener(function(request, sender, sendResponse) {
-//	switch (request.method)
-//	{
-//	}
-//});
+function checkSave_allowed(){
+    saveButton = document.getElementById('saveButton');
+
+    chrome.extension.sendMessage({method:'get_enabled_SA'}, function(response){
+        saveButton.checked = response;
+    });
+
+    saveButton.addEventListener('change', function() {
+        chrome.extension.sendMessage({method: 'save_allowed_changed', data: saveButton.checked}, function(response) {});
+    });
+};
+
+
 
 // Run our script as soon as the document's DOM is ready.
 document.addEventListener('DOMContentLoaded', function () {
 
     checkEnabled();
 
+    checkSave_allowed();
+
 	get_blocked_urls();
 
     get_allowed_hosts();
 
-	// Attach onclick event to button
-	//$("#add-ten-to-ticker").click( function() {
-	//	localTicker.addToTicker(10);
-	//});
+
 });
