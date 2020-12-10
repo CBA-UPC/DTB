@@ -20,9 +20,12 @@ function create_host_section(host){
 
     let hostdiv = document.createElement("div");
     hostdiv.id = host+"header";
-    let sectionTitle = document.createElement("h3");
+    let sectionTitle = document.createElement("h4");
     sectionTitle.id = host+"title";
-    sectionTitle.appendChild(document.createTextNode("Host: " + host));
+    sectionTitle.appendChild(document.createTextNode(host));
+
+    hostdiv.style.borderBottom = "2px solid #f1f1f1";
+    hostdiv.style.paddingBottom = "10px";
 
 
     let label_host = document.createElement("label");
@@ -45,6 +48,7 @@ function create_host_section(host){
     let hideButton = document.createElement("input");
     hideButton.type = "button";
     hideButton.value = "v";
+    hideButton.className = "unfoldBtn";
     hideButton.onclick = function(){
         if(document.getElementById(host).style.display == "none"){
             document.getElementById(host).style.display = "block";
@@ -124,10 +128,15 @@ function get_blocked_urls(){
                 }
                 createURLCheckbox(url);
             }
+            document.getElementById('blocked_urls').appendChild(document.createElement("br"));
+            let auxMessage= document.createTextNode("Changes will be applied after reloading the page");
+            document.getElementById('blocked_urls').appendChild(auxMessage);
         }
         else{
             document.getElementById('blocked_urls').appendChild(document.createTextNode("There are no blocked urls in this tab"));
         }
+        document.getElementById('blocked_urls').appendChild(document.createElement("br"));
+        document.getElementById('blocked_urls').appendChild(document.createElement("br"));
 	});
 };
 

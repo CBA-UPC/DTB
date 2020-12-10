@@ -1,0 +1,66 @@
+
+* {
+  box-sizing: border-box;
+  font-family: helvetica;
+}
+
+h1{
+    padding: 10px;
+}
+h3{
+    font-size: 16px;
+}
+h4{
+    font-size: 14px;
+}
+body {
+    min-width:400px;
+    font-size: 12px;
+    margin: 0;
+    color: white;
+    background-image: linear-gradient(to bottom, #cf1b1b, #900d0d);
+    padding-bottom: 25px;
+}
+
+div.titleDiv{
+    padding-left: 10px;
+}
+
+div.urls{
+    border-top: 3px groove #900d0d;
+    border-bottom: 3px groove #900d0d;
+    padding: 1em;
+    background-color: white;
+    color: #423144;
+}
+
+div.footDiv{
+    padding-left: 10px;
+}
+
+img{
+    border-radius: 50%;
+}
+
+input.unfoldBtn {
+    background-color: #cf1b1b;
+    border-radius: 4px;
+    color: white;
+    position: absolute;
+    right: 16px;
+    border: none;
+    width: 30px;
+    padding-bottom: 2px;
+    font-weight: bold;
+}
+
+
+
+input[type="checkbox"] {
+    width: 20px;
+}
+
+
+
+
+}

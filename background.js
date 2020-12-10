@@ -68,7 +68,7 @@ function newInfo (tabId){
 
 
 //change badge color (badge shows the number of suspicious url blocked on a website)
-chrome.browserAction.setBadgeBackgroundColor({color:'#FF5733'});
+chrome.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
 //############################################## LISTENERS ##############################################
 // esta funcion se ejecuta al ser instalado
