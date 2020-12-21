@@ -26,10 +26,15 @@
   </head>
   <body>
         <div id="title" class="titleDiv">
-            <img src="icons/icon96.png" alt="iconoextension" width="48" height="48" style="float:left;" hspace="10px"/>
+            <div align="middle">
+            <img class="logo" src="icons/icon96.png" alt="iconoextension" width="64" height="64"/>
             <h1> Deep Tracking Blocker</h1>
-            <input type="checkbox" id="onoffButton" name="onoffButton" value="On" >
-            <label for="onoffButton"> Enable / disable </label><br>
+            </div>
+            <br>
+            <label class="switch" >
+                <input type="checkbox" id="onoffButton" name="onoffButton" value="On" >
+                <div class="slider round"></div>
+            </label>
         </div>
         <br>
 
@@ -37,7 +42,7 @@
 
         <div id="blocked_urls" class="urls">
             <h3> Blocked urls: </h3>
-            If checkbox is checked, that url / host is allowed.
+            If checkbox is checked, that url/host is allowed.
             <br>
         </div>
 
@@ -46,7 +51,7 @@
         <div class="footDiv">
             <br>
             <input type="checkbox" id="saveButton" name="saveButton" value="save" checked>
-            <label for="saveButton"> Save changes between browser sessions </label><br>
+            <label for="saveButton"> <b>Save changes between browser sessions</b> </label><br>
         </div>
 
   </body>

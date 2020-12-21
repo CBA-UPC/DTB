@@ -177,5 +177,4 @@ document.addEventListener('DOMContentLoaded', function () {
 
     get_allowed_hosts();
 
-
 });

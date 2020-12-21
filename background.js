@@ -217,7 +217,7 @@ chrome.webRequest.onBeforeRequest.addListener(
             newInfo(idTab);
         }
 
-        //allow requests that have same host or are present in excepcions list
+        //allow requests that have same host
         let aux_url = new URL(request_url);
         if(tabsInfo.has(idTab)){
             if(aux_url.host == tabsInfo.get(idTab).host){
