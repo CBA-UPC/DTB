@@ -15,7 +15,6 @@
  * limitations under the License.
  */
 
-//Javascript que va detras del manifestjson
 //############################################## GLOBAL VARIABLES ##############################################
 
 //Boolean that indicates if extension's filter is activated or not
@@ -36,42 +35,15 @@ var user_allowed_urls = new Set();
 var user_allowed_hosts = new Set();
 
 //Whitelisted elements to avoid some false positives that affect some websites functioning, stored in whitelist.json
-var whitelisted_urls;
-var whitelisted_hosts;
 var whitelisted_matches;
-
-
-//function to create a new entry for tabsInfo
-function newInfo (tabId){
-    chrome.tabs.get(tabId,
-        function(tab) {
-            let aux_url, aux_host;
-            try {
-                aux_url = new URL(tab.url);
-                aux_host = aux_url.host;
-
-                let info = {
-                    id: tabId,
-                    url: tab.url,
-                    blocked_index: [],
-                    blocked: [],
-                    host: aux_host
-                };
-                tabsInfo.set(tabId,info);
-            } catch (e) {
-                //if you load something that's not a website, error, like local files
-                console.log(e);
-            }
-        }
-    );
-}
 
 
 //change badge color (badge shows the number of suspicious url blocked on a website)
 chrome.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
+
 //############################################## LISTENERS ##############################################
-// esta funcion se ejecuta al ser instalado
+//load extension on install
 chrome.runtime.onInstalled.addListener(
     function(){
         //meter aqui una url de bienvenida o algo sabes
@@ -82,7 +54,7 @@ chrome.runtime.onInstalled.addListener(
 );
 
 
-//cargar modelo al iniciar navegador
+//load NN model on start
 chrome.runtime.onStartup.addListener(
     function() {
         loadModel();
@@ -103,20 +75,13 @@ chrome.runtime.onStartup.addListener(
 
 
 // ############################################## WHITELIST FUNCTIONS ##############################################
-// purpose of this is to avoid false positive that affects website's usability and correct functioning
-
+// purpose of this is to avoid false positive that affects website usability and correct functioning
 async function loadWL(){
     let aux;
     await jQuery.getJSON("whitelist.json", function(result) {
         aux = result;
         for (var key in aux) {
             switch (key) {
-                case "whitelisted_urls":
-                    whitelisted_urls = aux[key];
-                    break;
-                case "whitelisted_hosts":
-                    whitelisted_hosts = aux[key];
-                    break;
                 case "whitelisted_matches":
                     whitelisted_matches = aux[key];
                     break;
@@ -175,12 +140,43 @@ function processResult(prepro_url){
 }
 
 
+//######################### tabInfo related functions #########################
+
+
+//function to create a new entry for tabsInfo
+function newInfo (tabId){
+    chrome.tabs.get(tabId,
+        function(tab) {
+            let aux_url, aux_host;
+            try {
+                if(tab.url == undefined){
+                    return;
+                }
+
+                aux_url = new URL(tab.url);
+                aux_host = aux_url.host;
+
+                let info = {
+                    id: tabId,
+                    url: tab.url,
+                    blocked_index: [],
+                    blocked: [],
+                    host: aux_host
+                };
+                tabsInfo.set(tabId,info);
+            } catch (e) {
+                //if you load something that's not a website, error, like local files
+                console.log("Visited site is not an URL");
+            }
+        }
+    );
+}
 
 function updateTabInfo (idTab, aux_URL){
     chrome.tabs.get(idTab,
         function(tab) {
             let check_value;
-            if(user_allowed_hosts.has(aux_URL.host) || whitelisted_hosts.includes(aux_URL.host) || whitelisted_urls.includes(aux_URL.href)){
+            if(user_allowed_hosts.has(aux_URL.host)){
                 check_value = true;
             }
             else{
@@ -200,11 +196,27 @@ function updateTabInfo (idTab, aux_URL){
     );
 }
 
+//######################### other functions #########################
+function isSpecialCase(aux_url, tabHost){
+    if((aux_url.host == "static.xx.fbcdn.net" || aux_url.host == "video-mad1-1.xx.fbcdn.net") && tabHost.includes("facebook.com")){
+        return true; //visiting facebook
+    }
+    if(aux_url.host == "static.twitchcdn.net" && tabHost.includes("twitch.tv")){
+        return true; //visiting twitch
+    }
+    if( aux_url.host == "external-content.duckduckgo.com" && tabHost.includes("duckduckgo.com")){
+        return true; //images on duckduckgo
+    }
+}
+
+
 
 
 // ############################################## REQUEST PROCESSING ##############################################
 chrome.webRequest.onBeforeRequest.addListener(
-    function(details){ //this is a callback function executed when details of the webrequest are available
+    function(details){
+        //this is a callback function executed when details of the webrequest are available
+
         //check if extension is enabled
         if(!filter){
             return;
@@ -213,20 +225,27 @@ chrome.webRequest.onBeforeRequest.addListener(
         const request_url = details.url;
         const idTab = details.tabId;
 
+        //just in case tabInfo was not created before
         if(idTab >= 0 && !tabsInfo.has(idTab)){
             newInfo(idTab);
         }
 
-        //allow requests that have same host
         let aux_url = new URL(request_url);
         if(tabsInfo.has(idTab)){
-            if(aux_url.host == tabsInfo.get(idTab).host){
-                //console.log(request_url, " and ", tabsInfo.get(idTab).url, " have same host, allowed connection" );
+            let tabHost = tabsInfo.get(idTab).host;
+
+            //allow requests that have same host
+            if(aux_url.host == tabHost){
+                return;
+            }
+
+            //allow requests in some special cases where correct functionality is broken otherwise
+            if(isSpecialCase(aux_url, tabHost)){
                 return;
             }
         }
 
-        let suspicious = 0;
+        let suspicious = 0; //here will be stored the url once is preprocessed
         let prepro_url = url_preprocessing(request_url);
         if(model != undefined) {
             suspicious = processResult(prepro_url);
@@ -235,7 +254,6 @@ chrome.webRequest.onBeforeRequest.addListener(
         //if it is classified as tracking, is added to tab info
         if (suspicious && tabsInfo.has(idTab)){
             //console.log("Classified as suspicous", request_url, aux_url.host, " Web host:", tabsInfo.get(idTab).host);
-            //console.log(aux_url);
 
             //checks whitelist
             for(var key in whitelisted_matches){
@@ -245,19 +263,15 @@ chrome.webRequest.onBeforeRequest.addListener(
                 }
             }
 
-            if(whitelisted_hosts.includes(aux_url.host) || whitelisted_urls.includes(request_url)){
-                console.log("Allowed by whitelist: ", request_url);
-                return;
-            }
-
             //if its not whitelisted, show it on popup
             updateTabInfo(idTab,aux_url);
 
             //if user has allowed it, don't cancel request
             if (user_allowed_hosts.has(aux_url.host) || user_allowed_urls.has(request_url)) {
-                console.log("Allowed by excepcions list: ", request_url);
+                //console.log("Allowed by excepcions list: ", request_url);
                 return;
             }
+
             return {cancel: true};
         };
     },
@@ -277,7 +291,7 @@ chrome.tabs.onActivated.addListener(
             return;
         }
         newInfo(activeInfo.tabId);
-        console.log(tabsInfo);
+        //console.log(tabsInfo);
     }
 );
 
@@ -302,7 +316,6 @@ chrome.tabs.onRemoved.addListener(
         if(!tabsInfo.has(tabId)){
             return;
         }
-        //console.log(tabsInfo);
         tabsInfo.delete(tabId);
     }
 );
@@ -345,7 +358,6 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
     // URL excepction management
     case 'add_url_exception':
         user_allowed_urls.add(request.data);
-        //console.log("message received ", request.data);
         if(tabsInfo.has(current_tab)){
             let i = tabsInfo.get(current_tab).blocked_index.indexOf(request.data);
             tabsInfo.get(current_tab).blocked[i].check =true;
@@ -363,7 +375,6 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
     // host excepction management
         case 'add_host_exception':
             user_allowed_hosts.add(request.data);
-            //console.log("message received ", request.data);
             break;
         case 'delete_host_exception':
             if(user_allowed_hosts.has(request.data)){
@@ -384,4 +395,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
         }
         break;
 	}
+
+    //this is to prevent error message "Unchecked runtime.lastError: The message port closed before a response was received." from appearing needlessly
+    sendResponse();
 });

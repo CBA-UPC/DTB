@@ -1,7 +1,3 @@
 {
-    "whitelisted_hosts":["static.twitchcdn.net","static.xx.fbcdn.net","video-mad1-1.xx.fbcdn.net", "duckduckgo.com"],
-
-    "whitelisted_urls":[],
-
-    "whitelisted_matches":["ttvnw.net","googlevideo.com", "twitter.com/i/api/2/timeline"]
+    "whitelisted_matches":["ttvnw.net","googlevideo.com"]
 }
