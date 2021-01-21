@@ -134,6 +134,10 @@ function processResult(prepro_url){
 function newInfo (tabId){
     chrome.tabs.get(tabId,
         function(tab) {
+            if (chrome.runtime.lastError) {
+                console.log("Sorry for this: ",chrome.runtime.lastError.message);
+                return;
+            }
             let aux_url, aux_host;
             try {
                 if(tab.url == undefined){
@@ -160,6 +164,9 @@ function newInfo (tabId){
 }
 
 function updateTabInfo (idTab, aux_URL){
+    if(!tabsInfo.has(idTab)){
+        newInfo(idTab);
+    }
     chrome.tabs.get(idTab,
         function(tab) {
             let check_value;
@@ -193,6 +200,12 @@ function isSpecialCase(aux_url, tabHost){
         return true; //visiting twitch
     }
     if(aux_url.host.includes("lolstatic") && tabHost.includes("leagueoflegends.com")){
+        return true;
+    }
+    if(aux_url.host.includes("outlook") && tabHost.includes("outlook.live.com")){
+        return true;
+    }
+    if(aux_url.host.includes("google.com") && tabHost.includes("google.com")){
         return true;
     }
     if(aux_url == "https://www.google.com/recaptcha/api.js"){
@@ -269,7 +282,8 @@ chrome.webRequest.onBeforeRequest.addListener(
 
         //if it is classified as tracking, is added to tab info
         if (suspicious && tabsInfo.has(idTab)){
-            //console.log("Classified as suspicous", request_url, aux_url.host, " Web host:", tabsInfo.get(idTab).host);
+            console.log("Classified as suspicous", request_url, aux_url.host, " Web host:", tabsInfo.get(idTab).host);
+            //console.log(aux_url);
 
             //checks whitelist
             for(var key in whitelisted_matches){
