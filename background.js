@@ -42,37 +42,24 @@ var whitelisted_matches;
 chrome.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
 
-//############################################## LISTENERS ##############################################
-//load extension on install
-chrome.runtime.onInstalled.addListener(
-    function(){
-        //meter aqui una url de bienvenida o algo sabes
-        loadModel();
-        load_dict();
-        loadWL();
+loadModel();
+load_dict();
+loadWL();
+
+
+chrome.storage.sync.get(['allowed_urls'], function(result){
+    if(Object.keys(result).length != 0){
+        result.allowed_urls.forEach(item => user_allowed_urls.add(item));
+        console.log("URLs recovered from memory: ", result.allowed_urls, user_allowed_urls);
     }
-);
+});
 
-
-//load NN model on start
-chrome.runtime.onStartup.addListener(
-    function() {
-        loadModel();
-        load_dict();
-        loadWL();
-
-        chrome.storage.sync.get(['allowed_urls'], function(result){
-            result.allowed_urls.forEach(item => user_allowed_urls.add(item));
-            console.log("URLs recovered from memory: ", result.allowed_urls, user_allowed_urls);
-        });
-
-        chrome.storage.sync.get(['allowed_hosts'], function(result){
-            result.allowed_hosts.forEach(item => user_allowed_hosts.add(item));
-            console.log("Hosts recovered from memory: ", result.allowed_hosts, user_allowed_hosts);
-        });
+chrome.storage.sync.get(['allowed_hosts'], function(result){
+    if(Object.keys(result).length != 0){
+        result.allowed_hosts.forEach(item => user_allowed_hosts.add(item));
+        console.log("Hosts recovered from memory: ", result.allowed_hosts, user_allowed_hosts);
     }
-);
-
+});
 
 // ############################################## WHITELIST FUNCTIONS ##############################################
 // purpose of this is to avoid false positive that affects website usability and correct functioning
@@ -197,17 +184,46 @@ function updateTabInfo (idTab, aux_URL){
 }
 
 //######################### other functions #########################
+//this section is to ensure functionality in some cases were falses positves where dicovered
 function isSpecialCase(aux_url, tabHost){
-    if((aux_url.host == "static.xx.fbcdn.net" || aux_url.host == "video-mad1-1.xx.fbcdn.net") && tabHost.includes("facebook.com")){
+    if(aux_url.host.includes("fbcdn.net") && tabHost.includes("facebook.com")){
         return true; //visiting facebook
     }
-    if(aux_url.host == "static.twitchcdn.net" && tabHost.includes("twitch.tv")){
+    if(aux_url.host.includes("twitchcdn.net") && tabHost.includes("twitch.tv")){
         return true; //visiting twitch
     }
-    if( aux_url.host == "external-content.duckduckgo.com" && tabHost.includes("duckduckgo.com")){
-        return true; //images on duckduckgo
+    if(aux_url.host.includes("lolstatic") && tabHost.includes("leagueoflegends.com")){
+        return true;
+    }
+    if(aux_url == "https://www.google.com/recaptcha/api.js"){
+        return true;
+    }
+    return false;
+}
+
+
+function saveStorageURLS(){
+    if (save_allowed) {
+        let arrayURLs = Array.from(user_allowed_urls.values());
+
+        chrome.storage.sync.set({ ['allowed_urls'] : arrayURLs }, function(){
+            console.log('URLs saved succesfully: ', arrayURLs);
+        });
     }
 }
+
+function saveStorageHosts(){
+    if (save_allowed) {
+        let arrayHosts = Array.from(user_allowed_hosts.values());
+
+        chrome.storage.sync.set({ ['allowed_hosts'] : arrayHosts }, function(){
+            console.log('Hosts saved succesfully', arrayHosts);
+        });
+    }
+
+}
+
+
 
 
 
@@ -235,7 +251,7 @@ chrome.webRequest.onBeforeRequest.addListener(
             let tabHost = tabsInfo.get(idTab).host;
 
             //allow requests that have same host
-            if(aux_url.host == tabHost){
+            if(aux_url.host.includes(tabHost)){
                 return;
             }
 
@@ -257,7 +273,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
             //checks whitelist
             for(var key in whitelisted_matches){
-                if(request_url.includes(whitelisted_matches[key])){
+                if(aux_url.host.includes(whitelisted_matches[key])){
                     console.log("Allowed by matches whitelist: ", request_url);
                     return;
                 }
@@ -268,7 +284,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
             //if user has allowed it, don't cancel request
             if (user_allowed_hosts.has(aux_url.host) || user_allowed_urls.has(request_url)) {
-                //console.log("Allowed by excepcions list: ", request_url);
+                console.log("Allowed by excepcions list: ", request_url);
                 return;
             }
 
@@ -291,7 +307,7 @@ chrome.tabs.onActivated.addListener(
             return;
         }
         newInfo(activeInfo.tabId);
-        //console.log(tabsInfo);
+        console.log(tabsInfo);
     }
 );
 
@@ -322,18 +338,8 @@ chrome.tabs.onRemoved.addListener(
 
 //it save the allowed sites in storage when a window is closed
 chrome.windows.onRemoved.addListener(function (windowid){
-    if (save_allowed) {
-        let arrayURLs = Array.from(user_allowed_urls.values());
-        let arrayHosts = Array.from(user_allowed_hosts.values());
-
-        chrome.storage.sync.set({ ['allowed_urls'] : arrayURLs }, function(){
-            console.log('URLs saved succesfully: ', arrayURLs);
-        });
-
-        chrome.storage.sync.set({ ['allowed_hosts'] : arrayHosts }, function(){
-            console.log('Hosts saved succesfully', arrayHosts);
-        });
-    }
+    saveStorageURLS();
+    saveStorageHosts();
 });
 
 
@@ -362,6 +368,7 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
             let i = tabsInfo.get(current_tab).blocked_index.indexOf(request.data);
             tabsInfo.get(current_tab).blocked[i].check =true;
         }
+        saveStorageURLS();
         break;
     case 'delete_url_exception':
         if(user_allowed_urls.has(request.data)){
@@ -371,15 +378,18 @@ chrome.extension.onMessage.addListener(function(request, sender, sendResponse) {
                 tabsInfo.get(current_tab).blocked[i].check =false;
             }
         }
+        saveStorageURLS();
         break;
     // host excepction management
         case 'add_host_exception':
             user_allowed_hosts.add(request.data);
+            saveStorageHosts();
             break;
         case 'delete_host_exception':
             if(user_allowed_hosts.has(request.data)){
                 user_allowed_hosts.delete(request.data);
             }
+            saveStorageHosts();
             break;
 
     case 'get_allowed_hosts':
