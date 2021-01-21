@@ -4,5 +4,7 @@ Chrome extension to avoid being tracked online and protect your personal informa
 ## Authors
 * Rubén Sanz-García
 * Ismael Castell-Uroz
-* Théo Poissonnier
 * Pere Barlet-Ros
+
+## Thanks
+* Théo Poissonnier for the DL model achieved during the research
