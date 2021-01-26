@@ -1,0 +1,145 @@
+
+* {
+  box-sizing: border-box;
+  font-family: helvetica;
+}
+
+h1{
+    margin-top: 15px;
+    margin-bottom: 0;
+    margin-left: 0;
+    font-family:"Trebuchet MS";
+}
+
+h3{
+    font-size: 16px;
+}
+h4{
+    font-size: 14px;
+}
+body {
+    min-width:400px;
+    max-width: 600px;
+    font-size: 12px;
+    margin: 0;
+    color: white;
+    background-image: linear-gradient(to bottom, #cf1b1b, #900d0d);
+    padding-bottom: 25px;
+}
+
+div.titleDiv{
+            position: relative;
+            text-align: center;
+
+}
+
+div.urls{
+    border-top: 3px groove #900d0d;
+    border-bottom: 3px groove #900d0d;
+    padding: 1em;
+    background-color: white;
+    color: #423144;
+}
+
+div.footDiv{
+    padding-left: 10px;
+}
+
+img.logo{
+    border-radius: 50%;
+    margin-bottom: 10px;
+    float: left;
+    margin-left: 20px;
+}
+
+input.unfoldBtn {
+    background-color: #cf1b1b;
+    border-radius: 4px;
+    color: white;
+    position: absolute;
+    right: 16px;
+    border: none;
+    width: 30px;
+    padding-bottom: 2px;
+    font-weight: bold;
+}
+
+input[type="checkbox"] {
+    width: 20px;
+}
+
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 60px;
+  height: 24px;
+}
+
+.switch input {display:none;}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: #2196F3;
+}
+
+input:focus + .slider {
+  box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+  -webkit-transform: translateX(36px);
+  -ms-transform: translateX(36px);
+  transform: translateX(36px);
+}
+
+/* Rounded sliders */
+.slider.round {
+  border-radius: 24px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.slider:after
+{
+ content:'OFF';
+ color: white;
+ display: block;
+ position: absolute;
+ transform: translate(-50%,-50%);
+ top: 50%;
+ left: 65%;
+ font-size: 12px;
+ font-weight: bold;
+ font-family: Verdana, sans-serif;
+}
+
+input:checked + .slider:after
+{
+  content:'ON';
+  left: 35%;
+}
