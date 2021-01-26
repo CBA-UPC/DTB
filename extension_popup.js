@@ -165,7 +165,6 @@ function checkSave_allowed(){
 };
 
 
-
 // Run our script as soon as the document's DOM is ready.
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -173,8 +172,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     checkSave_allowed();
 
-	get_blocked_urls();
-
-    get_allowed_hosts();
-
 });
+
+
+get_blocked_urls();
+
+get_allowed_hosts();
