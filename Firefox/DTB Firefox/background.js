@@ -253,7 +253,11 @@ chrome.webRequest.onBeforeRequest.addListener(
         const request_url = details.url;
         const idTab = details.tabId;
 
-        //just in case tabInfo was not created before
+        //needed when tab created in background
+        if(idTab >= 0 && !tabsInfo.has(idTab)){
+            newInfo(idTab);
+        }
+        
         if(tabsInfo.get(idTab) == undefined){
             return;
         }

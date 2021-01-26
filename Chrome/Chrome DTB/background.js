@@ -164,6 +164,7 @@ function newInfo (tabId){
 }
 
 function updateTabInfo (idTab, aux_URL){
+
         let check_value;
         if(user_allowed_hosts.has(aux_URL.host)){
             check_value = true;
@@ -253,7 +254,11 @@ chrome.webRequest.onBeforeRequest.addListener(
         const request_url = details.url;
         const idTab = details.tabId;
 
-        //just in case tabInfo was not created before
+        //needed when tab created in background
+        if(idTab >= 0 && !tabsInfo.has(idTab)){
+            newInfo(idTab);
+        }
+
         if(tabsInfo.get(idTab) == undefined){
             return;
         }
@@ -292,7 +297,6 @@ chrome.webRequest.onBeforeRequest.addListener(
             //if its not whitelisted, show it on popup
             updateTabInfo(idTab,aux_URL);
 
-
             //if user has allowed it, don't cancel request
             if (user_allowed_hosts.has(aux_URL.host) || user_allowed_urls.has(request_url)) {
                 console.log("Allowed by excepcions list: ", request_url);
@@ -310,6 +314,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 // ############################################## TABS LISTENERS ##############################################
 var current_tab;
+
 //on activated tab, creates new tabInfo if tab visited is not registered
 chrome.tabs.onActivated.addListener(
     function(activeInfo){
