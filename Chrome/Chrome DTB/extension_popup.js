@@ -133,6 +133,7 @@ function get_blocked_urls(){
             document.getElementById('blocked_urls').appendChild(auxMessage);
         }
         else{
+            document.getElementById('blocked_urls').appendChild(document.createElement("br"));
             document.getElementById('blocked_urls').appendChild(document.createTextNode("There are no blocked urls in this tab"));
         }
         document.getElementById('blocked_urls').appendChild(document.createElement("br"));

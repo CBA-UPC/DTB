@@ -147,12 +147,17 @@ function newInfo (tabId){
 
                 aux_host = new URL(tab.url).host;
 
+                baseHost = aux_host.split(".");
+                baseHost = baseHost.slice(baseHost.length-2, baseHost.length);
+                baseHost = (baseHost[0]+"."+baseHost[1]);
+
                 let info = {
                     id: tabId,
                     url: tab.url,
                     blocked_index: [],
                     blocked: [],
-                    host: aux_host
+                    host: aux_host,
+                    baseHost: baseHost,
                 };
                 tabsInfo.set(tabId,info);
             } catch (e) {
@@ -239,8 +244,6 @@ function saveStorageHosts(){
 
 
 
-
-
 // ############################################## REQUEST PROCESSING ##############################################
 chrome.webRequest.onBeforeRequest.addListener(
     function(details){
@@ -266,8 +269,8 @@ chrome.webRequest.onBeforeRequest.addListener(
         let aux_URL = new URL(request_url);
         let tabHost = tabsInfo.get(idTab).host;
 
-        //allow requests that have same host
-        if(aux_URL.host.includes(tabHost)){
+        //allow first party reuqest
+        if(aux_URL.host.includes(baseHost)){
             return;
         }
 
@@ -278,18 +281,18 @@ chrome.webRequest.onBeforeRequest.addListener(
 
         //if it is classified as tracking, is added to tab info
         if (suspicious && tabsInfo.has(idTab)){
-            //console.log("Classified as suspicous", request_url, aux_URL.host, " Web host:", tabHost);
+            //console.log("Classified as suspicous", aux_URL, aux_URL.host, " Web host:", tabHost);
 
             //allow requests in some special cases where correct functionality is broken otherwise
             if(isSpecialCase(aux_URL, tabHost)){
-                console.log("Allowed by special cases list: ", request_url);
+                //console.log("Allowed by special cases list: ", request_url);
                 return;
             }
 
             //checks whitelist
             for(var key in whitelisted_matches){
                 if(aux_URL.host.includes(whitelisted_matches[key])){
-                    console.log("Allowed by matches whitelist: ", request_url);
+                    //console.log("Allowed by matches whitelist: ", request_url);
                     return;
                 }
             }
@@ -299,7 +302,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
             //if user has allowed it, don't cancel request
             if (user_allowed_hosts.has(aux_URL.host) || user_allowed_urls.has(request_url)) {
-                console.log("Allowed by excepcions list: ", request_url);
+                //console.log("Allowed by excepcions list: ", request_url);
                 return;
             }
 
@@ -323,7 +326,7 @@ chrome.tabs.onActivated.addListener(
             return;
         }
         newInfo(activeInfo.tabId);
-        console.log(tabsInfo);
+        //console.log(tabsInfo);
     }
 );
 
@@ -331,8 +334,12 @@ chrome.tabs.onActivated.addListener(
 //on updated tab, creates new tabInfo when page is reloaded or url is changed
 chrome.tabs.onUpdated.addListener(
     function(tabId, changeInfo){
-        if(changeInfo.url != undefined && tabsInfo.has(tabId)){
+        //console.log(changeInfo);
+        if((changeInfo.url != undefined) && tabsInfo.has(tabId)){
             newInfo(tabId);
+            chrome.browserAction.setBadgeText(
+                {tabId: tabId, text: ('')}
+            );
         }
         else{
             return;
