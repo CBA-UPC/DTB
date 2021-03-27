@@ -17,25 +17,25 @@
 
 //############################################## GLOBAL VARIABLES ##############################################
 
-//Boolean that indicates if extension's filter is activated or not
+// Boolean that indicates if extension's filter is activated or not
 var filter = true;
 
-//Boolean to check is allowed sites should be saved between sessions
+// Boolean to check is allowed sites should be saved between sessions
 var save_allowed = true;
 
-//Variables needed for the deep learning model to work
+// Variables needed for the deep learning model to work
 var model;
 var dict;
 
-//Info about current open tabs will be handled in this variable
+// Info about current open tabs will be handled in this variable
 var tabsInfo = new Map();
 
-//User allowed urls/hosts are saved here. Set is used to avoid repeated appearences of an element
+// User allowed urls/hosts are saved here. Set is used to avoid repeated appearences of an element
 var user_allowed_urls = new Set();
 var user_allowed_hosts = new Set();
 
-//Whitelisted elements to avoid some false positives that affect some websites functioning, stored in whitelist.json
-var whitelisted_matches;
+// Exceptions elements to avoid some false positives that affect some websites functioning, stored in exceptions.json
+var exceptions_matches;
 
 
 //change badge color (badge shows the number of suspicious url blocked on a website)
@@ -44,7 +44,7 @@ browser.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
 loadModel();
 load_dict();
-loadWL();
+loadEx();
 
 
 browser.storage.sync.get(['allowed_urls'], function(result){
@@ -62,15 +62,15 @@ browser.storage.sync.get(['allowed_hosts'], function(result){
 });
 
 // ############################################## WHITELIST FUNCTIONS ##############################################
-// purpose of this is to avoid false positive that affects website usability and correct functioning
-async function loadWL(){
+// Whitelist to avoid some known false positives
+async function loadEx(){
     let aux;
-    await jQuery.getJSON("whitelist.json", function(result) {
+    await jQuery.getJSON("exceptions.json", function(result) {
         aux = result;
         for (var key in aux) {
             switch (key) {
-                case "whitelisted_matches":
-                    whitelisted_matches = aux[key];
+                case "exception_matches":
+                    exception_matches = aux[key];
                     break;
             }
         }
@@ -78,20 +78,19 @@ async function loadWL(){
 }
 
 
-// ############################################## FUNCIONES PARA EL MODELO ##############################################
-
+// ############################## MODEL FUNCTIONS ###############################
 //Load model
 async function loadModel(){
     model = await tf.loadLayersModel('./model_tfjs-DNN/model.json');
     //model.summary();
 }
 
-//load dictionary for preprocessing
+//Load dictionary for preprocessing
 async function load_dict(){
     await jQuery.getJSON("dict_url_raw.json", function(jsonDict) {
         dict = jsonDict;
-        //al caracter que tiene el 0 asignado como traduccion se lo cambiamos para que no interfiera con el padding,
-        //se le da el valor de dict.length que es el immediatamente mas peque siguiente
+        // Change character translated as "0" to avoid interference with padding.
+        // Setup the next smallest value (dict.length)
         for (var key in dict) {
             if (dict.hasOwnProperty(key) && dict[key] == 0) {
                 dict[key] = Object.keys(dict).length;
@@ -103,27 +102,27 @@ async function load_dict(){
 //######################### URL PREPROCESSING #########################
 
 function url_preprocessing(url){
-    //convertimos la url de string a array de caracteres
+    // Convert URL string to character array
     const url_array = Array.from(url);
 
-    //traducimos la url de caracteres a numeros segun el diccionario creado por la notebook (esta depende de la base de datos que utiliza para el training)
+    // Convert characters to numbers matching the DL model used dictionary (it depends on the training database)
     for (i=0; i < url_array.length; i++){
         if(dict != undefined && dict.hasOwnProperty(url_array[i]))
             url_array[i]=dict[url_array[i]];
     }
 
-    //padding a la izquierda
+    // Left padding & truncate
     return Array(200).fill(0).concat(url_array).slice(url_array.length);
 }
 
 
-//######################### INFERENCE TASK #########################
-//With a processed url returns an int to say if it has to be blocked or not
+//######################### INFERENCE TASK ############################
+// Returns an integer value depending if the url must be blocked or not (puede ser float y poner un threshold??)
 function processResult(prepro_url){
-    let result = model.predict(tf.tensor(prepro_url,[1, 200]));
+    let result = model.predictOnBatch(tf.tensor(prepro_url,[1, 200]));
     result = result.reshape([2]);
-    result = result.argMax(); //aqui tiene el valor que toca pero sigue siendo un tensor
-    return result.arraySync(); //Returns the tensor data as a nested array, as it is one value, it returns one int
+    result = result.argMax(); // Correct value but still inside a tensor
+    return result.arraySync(); // Returns the tensor data as a nested array. As it is one value, it returns one int
 }
 
 
@@ -135,8 +134,8 @@ function newInfo (tabId){
     browser.tabs.get(tabId,
         function(tab) {
             if (browser.runtime.lastError) {
-                //roudabout to error "no tab with id xxx"
-                console.log("Sorry for this: ",browser.runtime.lastError.message);
+                // roundabout to avoid error "no tab with id xxx"
+                console.log("There's an error, sorry: ",chrome.runtime.lastError.message);
                 return;
             }
             let aux_host;
@@ -147,7 +146,7 @@ function newInfo (tabId){
 
                 aux_host = new URL(tab.url).host;
 
-                baseHost = aux_host.split(".");
+                let baseHost = aux_host.split(".");
                 baseHost = baseHost.slice(baseHost.length-2, baseHost.length);
                 baseHost = (baseHost[0]+"."+baseHost[1]);
 
@@ -161,7 +160,7 @@ function newInfo (tabId){
                 };
                 tabsInfo.set(tabId,info);
             } catch (e) {
-                //if you load something that's not a website, error, like local files
+                // Show error when loaded something that is not a website (e.g. local files)
                 console.log("Visited site is not an URL");
             }
         }
@@ -194,27 +193,17 @@ function updateTabInfo (idTab, aux_URL){
 }
 
 //######################### other functions #########################
-//this section is to ensure functionality in some cases were falses positves where dicovered
-function isSpecialCase(aux_URL, tabHost){
-    if(aux_URL.host.includes("fbcdn.net") && tabHost.includes("facebook.com")){
-        return true; //visiting facebook
-    }
-    if(aux_URL.host.includes("twitchcdn.net") && tabHost.includes("twitch.tv")){
-        return true; //visiting twitch
-    }
-    if(aux_URL.host.includes("lolstatic") && tabHost.includes("leagueoflegends.com")){
-       return true;
-    }
-    if(aux_URL.host.includes("poecdn") && tabHost.includes("pathofexile.com")){
+// Function to skip some exceptions (falses positives like CDNs)
+function isException(aux_URL, tabHost){
+    if(aux_URL.href == "https://www.google.com/recaptcha/api.js"){
         return true;
     }
-    if(aux_URL.host.includes("outlook") && tabHost.includes("outlook.live.com")){
-        return true;
+    for(var key in exception_matches){
+        if(aux_URL.host.includes(exception_matches[key]["url_host"]) &&
+            (exception_matches[key]["tab_host"] === "*" || tabHost.includes(exception_matches[key]["tab_host"]))){
+            return true;
+        }
     }
-    if(aux_URL == "https://www.google.com/recaptcha/api.js"){
-        return true;
-    }
-
     return false;
 }
 
@@ -248,9 +237,9 @@ function saveStorageHosts(){
 // ############################################## REQUEST PROCESSING ##############################################
 browser.webRequest.onBeforeRequest.addListener(
     function(details){
-        //this is a callback function executed when details of the webrequest are available
+        //Callback function executed when details of the webrequest are available
 
-        //check if extension is enabled
+        //Check if extension is enabled
         if(!filter){
             return;
         }
@@ -258,7 +247,7 @@ browser.webRequest.onBeforeRequest.addListener(
         const request_url = details.url;
         const idTab = details.tabId;
 
-        //needed when tab created in background
+        //Needed when tab created in background
         if(idTab >= 0 && !tabsInfo.has(idTab)){
             newInfo(idTab);
         }
@@ -270,42 +259,30 @@ browser.webRequest.onBeforeRequest.addListener(
         let aux_URL = new URL(request_url);
         let tabHost = tabsInfo.get(idTab).host;
 
-        //allow first party reuqest
-        if(aux_URL.host.includes(baseHost)){
+        // Allow first party requests
+        if(aux_URL.host.includes(tabsInfo.get(idTab).baseHost)){
             return;
         }
 
-        let suspicious = 0; //here will be stored the url once is preprocessed
-        let prepro_url = url_preprocessing(request_url);
+        // Allow exceptions (mostly CDN's)
+        if(isException(aux_URL, tabHost)){
+            //console.log("Allowed by exceptions list: ", request_url);
+            return;
+        }
 
+        let suspicious = 0; // Here will be stored the url once is preprocessed
+        let prepro_url = url_preprocessing(request_url);
         suspicious = processResult(prepro_url);
 
 
-        //if it is classified as tracking, is added to tab info
+        // If suspicious, add it to tab info and show it on popup
         if (suspicious && tabsInfo.has(idTab)){
-            //console.log("Classified as suspicous", request_url, aux_URL.host, " Web host:", tabHost);
-
-            //allow requests in some special cases where correct functionality is broken otherwise
-            if(isSpecialCase(aux_URL, tabHost)){
-                console.log("Allowed by special cases list: ", request_url);
-                return;
-            }
-
-            //checks whitelist
-            for(var key in whitelisted_matches){
-                if(aux_URL.host.includes(whitelisted_matches[key])){
-                    console.log("Allowed by matches whitelist: ", request_url);
-                    return;
-                }
-            }
-
-            //if its not whitelisted, show it on popup
+            //console.log("Classified as suspicious", aux_URL, aux_URL.host, " Web host:", tabHost);
             updateTabInfo(idTab,aux_URL);
 
-
-            //if user has allowed it, don't cancel request
+            // Allow user allowed hosts and requests, needs to be here to be showed to the user
             if (user_allowed_hosts.has(aux_URL.host) || user_allowed_urls.has(request_url)) {
-                console.log("Allowed by excepcions list: ", request_url);
+                //console.log("Allowed by user exceptions list: ", request_url);
                 return;
             }
 
@@ -320,7 +297,7 @@ browser.webRequest.onBeforeRequest.addListener(
 
 // ############################################## TABS LISTENERS ##############################################
 var current_tab;
-//on activated tab, creates new tabInfo if tab visited is not registered
+// Creates new tabInfo when tab is visited (onActivated) and is not already registered
 browser.tabs.onActivated.addListener(
     function(activeInfo){
         current_tab = activeInfo.tabId;
@@ -328,29 +305,25 @@ browser.tabs.onActivated.addListener(
             return;
         }
         newInfo(activeInfo.tabId);
-        console.log(tabsInfo);
+        //console.log(tabsInfo);
     }
 );
 
 
-//on updated tab, creates new tabInfo when page is reloaded or url is changed
+// Creates new tabInfo when page is reloaded or url is changed (onUpdated)
 browser.tabs.onUpdated.addListener(
     function(tabId, changeInfo){
-        if((changeInfo.url != undefined) && tabsInfo.has(tabId)){
+        if((changeInfo.status == "loading") && tabsInfo.has(tabId)){
             newInfo(tabId);
             browser.browserAction.setBadgeText(
                 {tabId: tabId, text: ('')}
             );
         }
-        else{
-            return;
-        };
-
     }
 );
 
 
-//on removed, remove tabInfo when a tab is closed
+// Remove tabInfo when a tab is closed (onRemove)
 browser.tabs.onRemoved.addListener(
     function(tabId){
         if(!tabsInfo.has(tabId)){
@@ -360,7 +333,7 @@ browser.tabs.onRemoved.addListener(
     }
 );
 
-//it save the allowed sites in storage when a window is closed
+// Save allowed sites in storage when a window is closed
 browser.windows.onRemoved.addListener(function (windowid){
     saveStorageURLS();
     saveStorageHosts();
@@ -385,7 +358,7 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         save_allowed = request.data;
         break;
 
-    // URL excepction management
+    // URL exception management
     case 'add_url_exception':
         user_allowed_urls.add(request.data);
         if(tabsInfo.has(current_tab)){
@@ -425,8 +398,12 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             sendResponse(tabsInfo.get(current_tab).blocked);
         }
         break;
+    case 'reload_tab':
+        var code = 'window.location.reload();';
+        browser.tabs.executeScript(current_tab, {code: code});
+        break;
 	}
 
-    //this is to prevent error message "Unchecked runtime.lastError: The message port closed before a response was received." from appearing needlessly
+    // Needed to prevent error "Unchecked runtime.lastError: The message port closed before a response was received." from appearing needlessly
     sendResponse();
 });

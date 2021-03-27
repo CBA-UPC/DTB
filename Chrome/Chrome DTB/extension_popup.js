@@ -173,6 +173,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
     checkSave_allowed();
 
+    document.getElementById("btnTabReload").onclick = function(){
+        chrome.extension.sendMessage({method: 'reload_tab'}, function(response) {});
+        window.close();
+    }
 });
 
 
