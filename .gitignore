@@ -1,1 +1,4 @@
 Firefox/Firefox DTB/tfjs_package/
+*.zip
+*.crx
+*.perm
