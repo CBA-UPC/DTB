@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-//############################################## GLOBAL VARIABLES ##############################################
+// ############################################## GLOBAL VARIABLES ##############################################
 
 // Boolean that indicates if extension's filter is activated or not
 var filter = true;
@@ -37,14 +37,17 @@ var user_allowed_hosts = new Set();
 // Exceptions elements to avoid some false positives that affect some websites functioning, stored in exceptions.json
 var exceptions_matches;
 
+// Content blacklist: a list of SHA-256 hashes for the content-blocker
+var hash_blacklist = ["",""];
 
-//change badge color (badge shows the number of suspicious url blocked on a website)
+// change badge color (badge shows the number of suspicious url blocked on a website)
 browser.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
 
 loadModel();
 load_dict();
 loadEx();
+downloadHashBlacklist();
 
 
 browser.storage.sync.get(['allowed_urls'], function(result){
@@ -57,7 +60,7 @@ browser.storage.sync.get(['allowed_urls'], function(result){
 browser.storage.sync.get(['allowed_hosts'], function(result){
     if(result != undefined && Object.keys(result).length != 0){
         result.allowed_hosts.forEach(item => user_allowed_hosts.add(item));
-        console.log("Hosts recovered from memory: ", result.allowed_hosts, user_allowed_hosts);
+        console.debug("Hosts recovered from memory: ", result.allowed_hosts, user_allowed_hosts);
     }
 });
 
@@ -78,14 +81,85 @@ async function loadEx(){
 }
 
 
-// ############################## MODEL FUNCTIONS ###############################
-//Load model
+// ############################################## INIT FUNCTIONS ##############################################
+async function downloadHashBlacklist(){
+    if (await checkHashlistUpdate()) {
+        await updateHashlist();
+    }
+    writeBlacklist();
+}
+
+
+async function writeBlacklist() {
+    var aux = await browser.storage.local.get("hashDB_content");
+    hash_blacklist = aux.hashDB_content;
+
+    // @debug
+    console.debug("hash blacklist loaded");
+}
+
+
+async function getRemoteHashlistHash() {
+   var response = await fetch('https://raw.githubusercontent.com/oscarsanchezdm/DTBresources/main/resourcelist_hash.txt');
+   var content = await response.text();
+   return content;
+}
+
+
+async function getLocalHashlistHash() {
+    var aux = await browser.storage.local.get("hashDB_hash");
+    return aux.hashDB_hash;
+}
+
+
+async function checkHashlistUpdate() {
+    var localHashlistHash = await getLocalHashlistHash();
+    var remoteHashlistHash = await getRemoteHashlistHash();
+
+    // @debug
+    console.debug("act: " + localHashlistHash);
+    console.debug("rem: " + remoteHashlistHash);
+
+    if (localHashlistHash == remoteHashlistHash) { 
+        console.debug("hash is up to date!");
+        return false; 
+    }
+
+    var hashDB_hash = remoteHashlistHash;
+    browser.storage.local.set({hashDB_hash});
+    return true;
+}
+
+
+async function updateHashlist() {
+    // @debug
+    console.debug("downloading new hash blacklist.");
+
+    var response = await fetch('https://raw.githubusercontent.com/oscarsanchezdm/DTBresources/main/resourcelist.csv');
+    var online_content = (await response.text()).split("\n");
+    var hashDB_content = await parseBlacklist(online_content);
+    browser.storage.local.set({hashDB_content});
+}
+
+
+async function parseBlacklist(orig_blacklist) {
+    var new_blacklist = [];
+    for (var i = 0; i < orig_blacklist.length; i++) {
+        var aux = orig_blacklist[i].split(',');
+        new_blacklist.push([aux[0],aux[1]]);
+    }
+    return new_blacklist;
+}
+
+// ############################################## MODEL FUNCTIONS ##############################################
+
+// Load model
 async function loadModel(){
     model = await tf.loadLayersModel('./model_tfjs-DNN/model.json');
     //model.summary();
 }
 
-//Load dictionary for preprocessing
+// Load dictionary for preprocessing
 async function load_dict(){
     await jQuery.getJSON("dict_url_raw.json", function(jsonDict) {
         dict = jsonDict;
@@ -99,8 +173,33 @@ async function load_dict(){
     });
 }
 
-//######################### URL PREPROCESSING #########################
+// ######################### CONTENT-BLOCKER FUNCTIONS #########################
+// generates the SHA-256 hash string from an ArrayBuffer
+async function hash_func(data) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);               // hash the message
+    const hashArray = Array.from(new Uint8Array(hashBuffer));                     // convert buffer to byte array
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join(''); // convert bytes to hex string
+    return hashHex;
+}
 
+// check if resource hashes are blacklisted
+async function isOnBlacklist(hash) {
+   let binarySearch = function (arr, x, start, end) { 
+        if (start > end) return [false,false]; 
+
+        let mid=Math.floor((start + end)/2); 
+        if (arr[mid][0] == x && arr[mid][1] == 0) return [true,false]; 
+        if (arr[mid][0] == x && arr[mid][1] != 0) return [true,true]; 
+        
+        if (arr[mid][0] > x) return binarySearch(arr, x, start, mid-1); 
+        else return binarySearch(arr, x, mid+1, end); 
+    } 
+
+    var ret = await binarySearch(hash_blacklist, hash, 0, hash_blacklist.length-1);
+    return ret;
+}
+
+// ######################### URL PREPROCESSING #########################
 function url_preprocessing(url){
     // Convert URL string to character array
     const url_array = Array.from(url);
@@ -115,8 +214,7 @@ function url_preprocessing(url){
     return Array(200).fill(0).concat(url_array).slice(url_array.length);
 }
 
-
-//######################### INFERENCE TASK ############################
+// ######################### INFERENCE TASK #########################
 // Returns an integer value depending if the url must be blocked or not (puede ser float y poner un threshold??)
 function processResult(prepro_url){
     let result = model.predictOnBatch(tf.tensor(prepro_url,[1, 200]));
@@ -127,15 +225,13 @@ function processResult(prepro_url){
 
 
 //######################### tabInfo related functions #########################
-
-
-//function to create a new entry for tabsInfo
+// Function to create a new entry for tabsInfo
 function newInfo (tabId){
     browser.tabs.get(tabId,
         function(tab) {
             if (browser.runtime.lastError) {
                 // roundabout to avoid error "no tab with id xxx"
-                console.log("There's an error, sorry: ",chrome.runtime.lastError.message);
+                console.log("There's an error, sorry: ",browser.runtime.lastError.message);
                 return;
             }
             let aux_host;
@@ -226,12 +322,7 @@ function saveStorageHosts(){
             console.log('Hosts saved succesfully', arrayHosts);
         });
     }
-
 }
-
-
-
-
 
 
 // ############################################## REQUEST PROCESSING ##############################################
@@ -247,7 +338,7 @@ browser.webRequest.onBeforeRequest.addListener(
         const request_url = details.url;
         const idTab = details.tabId;
 
-        //Needed when tab created in background
+        // Needed when tab created in background
         if(idTab >= 0 && !tabsInfo.has(idTab)){
             newInfo(idTab);
         }
@@ -260,12 +351,12 @@ browser.webRequest.onBeforeRequest.addListener(
         let tabHost = tabsInfo.get(idTab).host;
 
         // Allow first party requests
-        if(aux_URL.host.includes(tabsInfo.get(idTab).baseHost)){
+        if (aux_URL.host.includes(tabsInfo.get(idTab).baseHost)){
             return;
         }
 
         // Allow exceptions (mostly CDN's)
-        if(isException(aux_URL, tabHost)){
+        if (isException(aux_URL, tabHost)){
             //console.log("Allowed by exceptions list: ", request_url);
             return;
         }
@@ -273,7 +364,6 @@ browser.webRequest.onBeforeRequest.addListener(
         let suspicious = 0; // Here will be stored the url once is preprocessed
         let prepro_url = url_preprocessing(request_url);
         suspicious = processResult(prepro_url);
-
 
         // If suspicious, add it to tab info and show it on popup
         if (suspicious && tabsInfo.has(idTab)){
@@ -288,6 +378,52 @@ browser.webRequest.onBeforeRequest.addListener(
 
             return {cancel: true};
         };
+
+        // ############################################## CONTENT BLOCKER ##############################################
+        var filterReq = browser.webRequest.filterResponseData(details.requestId);
+        let tmp_data = [];
+
+        filterReq.ondata = event => {
+            tmp_data.push(event.data);
+        };
+
+        filterReq.onstop = async event => {
+            /*
+                @TO-DO: CHECK WHITELIST
+            */
+
+            let auxblob = new Blob(tmp_data);
+            let data = await new Response(auxblob).arrayBuffer();
+
+            let hash = await hash_func(data); 
+            let isTracking = await isOnBlacklist(hash);
+
+            var block = false;
+
+            if (isTracking[0]) {
+                block = true;
+                if (isTracking[1]) {
+                    /*
+                        @TO-DO: REPLACEMENT
+                        data = blablabla
+                    */
+                } 
+                let aux_URL = await new URL(request_url);
+                updateTabInfo(details.tabId,aux_URL);
+            } 
+            await writeFilter(filterReq,block,data);
+        }
+
+        async function writeFilter(filter,isTracking,data) {
+            if (isTracking) {
+                // canviar estat a blocked?
+                filter.close();
+                
+            } else {
+                filter.write(data);
+                filter.close();
+            }
+        }
     },
     {urls: ["<all_urls>"]},
     ["blocking"]
@@ -321,7 +457,6 @@ browser.tabs.onUpdated.addListener(
         }
     }
 );
-
 
 // Remove tabInfo when a tab is closed (onRemove)
 browser.tabs.onRemoved.addListener(
@@ -372,7 +507,7 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
             user_allowed_urls.delete(request.data);
             if(tabsInfo.has(current_tab)){
                 let i = tabsInfo.get(current_tab).blocked_index.indexOf(request.data);
-                tabsInfo.get(current_tab).blocked[i].check =false;
+                tabsInfo.get(current_tab).blocked[i].check = false;
             }
         }
         saveStorageURLS();
@@ -394,7 +529,6 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         break;
     case 'get_blocked_urls':
         if(tabsInfo.has(current_tab)){
-            //console.log("Request received, sending data...", tabsInfo.get(current_tab).blocked);
             sendResponse(tabsInfo.get(current_tab).blocked);
         }
         break;

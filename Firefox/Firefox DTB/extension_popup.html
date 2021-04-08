@@ -18,6 +18,7 @@
 -->
 
 <html>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <head>
       <script src="extension_popup.js"></script>
@@ -35,9 +36,17 @@
             <label class="switch" >
                 <input type="checkbox" id="onoffButton" name="onoffButton" value="On" >
                 <div class="slider round"></div>
-            </label>
+            </label>           
         </div>
         <br>
+
+        <div id="report" class="urls">
+            <label class="button" >
+                <h3> Report broken URL: </h3>
+                <button id="report_broken_urL" class="w3-button w3-red w3-round-xlarge">Report</button>
+            </label>
+        </div>
+       
 
         <div id="blocked_urls" class="urls">
             <button id="btnTabReload" class="reloadBtn" type="submit" name="btnTabReload" value="reload">
