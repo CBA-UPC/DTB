@@ -165,40 +165,6 @@ function checkSave_allowed(){
     });
 };
 
-
-
-//logTabs&onError: get current Tab
-function logTabs(tabs) {
-    // tabs[0].url requires the `tabs` permission or a matching host permission.
-    browser.runtime.sendMessage({method: 'report_broken_url', data: tabs[0].url});
-}
-  
-function onError(error) {
-    console.log(`Error: ${error}`);
-}
-
-function reportStats() {
-    let querying = browser.tabs.query({currentWindow: true, active: true});
-    querying.then(logTabs, onError);
-}
-
-// Run our script as soon as the document's DOM is ready.
-document.addEventListener('DOMContentLoaded', function () {
-
-    checkEnabled();
-
-    var reportButton = document.getElementById("report_broken_urL");
-    reportButton.addEventListener('click',reportStats);
-        
-    checkSave_allowed();
-    document.getElementById("btnTabReload").onclick = function(){
-        browser.runtime.sendMessage({method: 'reload_tab'}, function(response) {});
-        window.close();
-    }
-
-});
-
-
 get_blocked_urls();
 
 get_allowed_hosts();
