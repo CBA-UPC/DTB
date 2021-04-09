@@ -18,6 +18,7 @@
 -->
 
 <html>
+  <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <head>
       <script src="extension_popup.js"></script>
@@ -35,13 +36,13 @@
             <label class="switch" >
                 <input type="checkbox" id="onoffButton" name="onoffButton" value="On" >
                 <div class="slider round"></div>
-            </label>
+            </label>           
         </div>
         <br>
 
-
-
         <div id="blocked_urls" class="urls">
+            <button id="btnTabReload" class="reloadBtn" type="submit" name="btnTabReload" value="reload">
+                <img src="icons/reload_iconw.png" width="12px" height="12px"> Reload tab</button>
             <h3> Blocked urls: </h3>
             If checkbox is checked, that url/host is allowed.
             <br>
