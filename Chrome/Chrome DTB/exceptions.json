@@ -7,9 +7,11 @@
         {"url_host": "reddit", "tab_host": "reddit.com"},
         {"url_host": "lolstatic", "tab_host": "leagueoflegends.com"},
         {"url_host": "twitchcdn.net", "tab_host": "twitch.tv"},
+        {"url_host": "cloudfront.net", "tab_host": "twitch.tv"},
         {"url_host": "poecdn", "tab_host": "pathofexile.com"},
         {"url_host": "googlevideo.com", "tab_host": "*"},
         {"url_host": "disney", "tab_host": "disney"},
+        {"url_host": "slack", "tab_host": "slack.com"},
         {"url_host": "uecdn.es", "tab_host": "marca.com"},
         {"url_host": "alicdn.com", "tab_host": "aliexpress.com"},
         {"url_host": "ttvnw.net", "tab_host": "*"},
@@ -17,5 +19,7 @@
         {"url_host": "nflxvideo.net", "tab_host": "netflix"},
         {"url_host": "atlassian", "tab_host": "atlassian"},
         {"url_host": "atl-paas", "tab_host": "atlassian"},
+        {"url_host": "ikea", "tab_host": "ikea"},
+        {"url_host": "steam", "tab_host": "steam"},
         {"url_host": "cloudfront.net", "tab_host": "bitbucket.org"}]
 }
