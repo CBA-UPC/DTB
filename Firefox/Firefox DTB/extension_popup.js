@@ -165,6 +165,24 @@ function checkSave_allowed(){
     });
 };
 
+// Run our script as soon as the document's DOM is ready.
+document.addEventListener('DOMContentLoaded', function () {
+
+    checkEnabled();
+
+    checkSave_allowed();
+
+    document.getElementById("btnTabReload").onclick = function(){
+        browser.runtime.sendMessage({method: 'reload_tab'}, function(response) {});
+        window.close();
+    }
+
+    document.getElementById("btnSettings").onclick = function(){
+        window.open("settings.html")
+    }
+
+});
+
 get_blocked_urls();
 
 get_allowed_hosts();

@@ -1,0 +1,95 @@
+<html>
+<meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-8 mx-auto">
+                <br>
+                <h2 class="h3 mb-4 page-title">DTB+ settings</h2>
+                <div class="my-4">
+                    <hr class="my-4" />
+                    <strong class="mb-0">Blocking behaviour</strong>
+                    <p>DTB+ uses two methods to block trackers: AI and hash-blocking algorithms.</p>
+                    <div class="list-group mb-5 shadow">
+                        <div class="list-group-item">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <strong class="mb-0">AI blocking mode</strong>
+                                    <div class="col-auto">
+                                        <div class="custom-control custom-switch">
+                                            <input value="weak" type="radio" name="mode" id="mode_weak" class="custom-control-input" id="alert2" />
+                                            <span class="custom-control-label">Weak</span>
+                                            <span class="text-muted mb-0">Block content when there is at least 90% of chance the content contains tracking.</span>
+                                        </div>
+                                        <div class="custom-control custom-switch">
+                                            <input value="normal" type="radio" name="mode" id="mode_normal" class="custom-control-input" id="alert2" />
+                                            <span class="custom-control-label">Normal</span>
+                                            <span class="text-muted mb-0">Block content when there is at least 75% of chance the content contains tracking.</span>
+                                        </div>
+                                        <div class="custom-control custom-switch">
+                                            <input value="hard" type="radio" name="mode" id="mode_hard" class="custom-control-input" id="alert2" />
+                                            <span class="custom-control-label">Hard (Recommended)</span>
+                                            <span class="text-muted mb-0">Block content when there is at least 60% of chance the content contains tracking.</span>
+                                        </div>
+                                        <div class="custom-control custom-switch">
+                                            <input value="extreme" type="radio" name="mode" id="mode_extreme" class="custom-control-input" id="alert2" />
+                                            <span class="custom-control-label">Extreme</span>
+                                            <span class="text-muted mb-0">Block content when there is at least 50% of chance the content contains tracking.</span>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <strong class="mb-0">Scan only for scripts</strong>
+                                    <p class="text-muted mb-0">Media content, such as images, can contain tracking techniques.</p>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" class="custom-control-input" id="only_script_button" />
+                                        <span class="custom-control-label"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="my-4" />
+                    <strong class="mb-0">Advanced settings</strong>
+                    <p> </p><!--put text here-->
+                    <div class="list-group mb-5 shadow">
+                        <div class="list-group-item">
+                            <div class="row align-items-center">
+                                <div class="col">
+                                    <strong class="mb-0">Debug mode</strong>
+                                    <p class="text-muted mb-0">The browser's console will show information about the plugin and content blocking.</p>
+                                </div>
+                                <div class="col-auto">
+                                    <div class="custom-control custom-switch">
+                                        <input id="debug_button" type="checkbox" class="custom-control-input" checked="" />
+                                        <span class="custom-control-label"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+                    <strong class="mb-1">Permanent whitelist</strong>
+                    <p>The domains included here won't be blocked by DTB+</p><!--put text here-->
+                    <div class="list-group mb-5 shadow">
+                        <textarea id="permanent_whitelist" name="permanent_whitelist"></textarea>
+                    </div>
+                    <strong class="mb-0">Session whitelist</strong>
+                    <p>The domains included here won't be blocked by DTB+ until you open Firefox again.</p><!--put text here-->
+                    <div class="list-group mb-5 shadow">
+                        <!--whitelist line edit-->
+                        <textarea id="temp_whitelist" name="temp_whitelist"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="settings.js"></script>
+</html>

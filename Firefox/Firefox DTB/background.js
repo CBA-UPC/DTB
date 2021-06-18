@@ -18,7 +18,7 @@
 // ############################################## GLOBAL VARIABLES ##############################################
 
 // Boolean that indicates if extension's filter is activated or not
-var filter = true;
+var enabled = true;
 
 // Boolean to check is allowed sites should be saved between sessions
 var save_allowed = true;
@@ -43,6 +43,10 @@ var hash_blacklist = ["",""];
 // change badge color (badge shows the number of suspicious url blocked on a website)
 browser.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
+var debug = true; //define if the debug mode is enabled
+var threshold = 0.75; //threshold for the learning model blocking mode.
+var block_only_scripts = true; //enable or disable media blocking
+
 
 loadModel();
 load_dict();
@@ -63,6 +67,23 @@ browser.storage.sync.get(['allowed_hosts'], function(result){
         console.debug("Hosts recovered from memory: ", result.allowed_hosts, user_allowed_hosts);
     }
 });
+
+function gotSettings(item) {
+    console.debug(item)
+    if (item.settings.threshold != undefined) {
+        threshold = item.settings.threshold;
+    }
+    if (typeof item.settings.debug === "boolean") {
+        debug = item.settings.debug;
+    }
+    if (typeof item.settings.block_only_scripts === "boolean") {
+        block_only_scripts = item.settings.block_only_scripts;
+    }
+    console.debug("Recovering threshold from memory. Threshold value is " + threshold + ", debug is " + debug)
+}
+
+browser.storage.sync.get('settings').then(gotSettings,onError);
+
 
 // ############################################## WHITELIST FUNCTIONS ##############################################
 // Whitelist to avoid some known false positives
@@ -100,7 +121,7 @@ async function writeBlacklist() {
 
 
 async function getRemoteHashlistHash() {
-   var response = await fetch('https://raw.githubusercontent.com/oscarsanchezdm/DTBresources/main/resourcelist_hash.txt');
+   var response = await fetch('http://tfm2.cba.upc.edu/contents/resourcelist_hash.txt');
    var content = await response.text();
    return content;
 }
@@ -135,7 +156,7 @@ async function updateHashlist() {
     // @debug
     console.debug("downloading new hash blacklist.");
 
-    var response = await fetch('https://raw.githubusercontent.com/oscarsanchezdm/DTBresources/main/resourcelist.csv');
+    var response = await fetch('http://tfm2.cba.upc.edu/contents/resourcelist.csv');
     var online_content = (await response.text()).split("\n");
     var hashDB_content = await parseBlacklist(online_content);
     browser.storage.local.set({hashDB_content});
@@ -189,7 +210,7 @@ async function isOnBlacklist(hash) {
 
         let mid=Math.floor((start + end)/2); 
         if (arr[mid][0] == x && arr[mid][1] == 0) return [true,false]; 
-        if (arr[mid][0] == x && arr[mid][1] != 0) return [true,true]; 
+        if (arr[mid][0] == x && arr[mid][1] != 0) return [true,arr[mid][1]];
         
         if (arr[mid][0] > x) return binarySearch(arr, x, start, mid-1); 
         else return binarySearch(arr, x, mid+1, end); 
@@ -219,8 +240,9 @@ function url_preprocessing(url){
 function processResult(prepro_url){
     let result = model.predictOnBatch(tf.tensor(prepro_url,[1, 200]));
     result = result.reshape([2]);
-    result = result.argMax(); // Correct value but still inside a tensor
-    return result.arraySync(); // Returns the tensor data as a nested array. As it is one value, it returns one int
+    //max_value = result.arraySync(); // Correct value but still inside a tensor
+    //console.debug(result.arraySync())
+    return (result.arraySync()[1]>threshold); // Returns the tensor data as a nested array. As it is one value, it returns one int
 }
 
 
@@ -324,14 +346,49 @@ function saveStorageHosts(){
     }
 }
 
+async function getReplacementFile(hash){
+    var response = await fetch('http://tfm2.cba.upc.edu/contents/replacements/'+hash);
+    if (!response.ok) {
+        console.debug("returning -1")
+        return -1;
+    } else {
+        var content = await response.text();
+        return content;
+    }
+}
+
+function onError(error) {
+    console.log(error)
+}
+
+function setItem() {
+    console.log("settings saved");
+}
+
+function saveSettings() {
+    let settings = { threshold: threshold, debug: debug, block_only_scripts: block_only_scripts }
+    console.debug(settings)
+    browser.storage.sync.set({settings}).then(setItem, onError);
+}
+
 
 // ############################################## REQUEST PROCESSING ##############################################
+function updateBlockTypes() {
+    if (block_only_scripts) {
+        block_types = ["script"];
+    } else {
+        block_types = ["beacon", "csp_report", "font", "image", "imageset", "main_frame", "media", "object", "object_subrequest", "ping", "script", "speculative", "stylesheet", "sub_frame", "web_manifest", "websocket", "xbl", "xml_dtd", "xmlhttprequest", "xslt", "other"];
+    }
+}
+
+updateBlockTypes();
+
 browser.webRequest.onBeforeRequest.addListener(
     function(details){
         //Callback function executed when details of the webrequest are available
 
         //Check if extension is enabled
-        if(!filter){
+        if (!enabled){
             return;
         }
 
@@ -376,9 +433,13 @@ browser.webRequest.onBeforeRequest.addListener(
                 return;
             }
 
+            if (debug) {
+                console.debug("[TENSOR]" + request_url)
+            }
+
             return {cancel: true};
         };
-
+        
         // ############################################## CONTENT BLOCKER ##############################################
         var filterReq = browser.webRequest.filterResponseData(details.requestId);
         let tmp_data = [];
@@ -399,33 +460,45 @@ browser.webRequest.onBeforeRequest.addListener(
             let isTracking = await isOnBlacklist(hash);
 
             var block = false;
-
+            var replace = false;
+            
             if (isTracking[0]) {
                 block = true;
                 if (isTracking[1]) {
-                    /*
-                        @TO-DO: REPLACEMENT
-                        data = blablabla
-                    */
-                } 
+                    replace = true
+                    let encoder = new TextEncoder();
+                    //data = encoder.encode("replace test")
+                    data = await getReplacementFile(isTracking[1])
+                    
+                    if (debug) {
+                        console.debug("[HASH+REPLACE]" + request_url)
+                    }
+                } else if (debug) {
+                    if (debug) {
+                        console.debug("[HASH]" + request_url)
+                    }
+                }
                 let aux_URL = await new URL(request_url);
                 updateTabInfo(details.tabId,aux_URL);
             } 
-            await writeFilter(filterReq,block,data);
+            await writeFilter(block,replace,data);
         }
 
-        async function writeFilter(filter,isTracking,data) {
+        async function writeFilter(isTracking,replace,data) {
             if (isTracking) {
+                if (replace) {
+                    // filterReq.write(data);
+                }
                 // canviar estat a blocked?
-                filter.close();
+                filterReq.close();
                 
             } else {
-                filter.write(data);
-                filter.close();
+                filterReq.write(data);
+                filterReq.close();
             }
         }
     },
-    {urls: ["<all_urls>"]},
+    {urls: ["<all_urls>"], types: block_types },
     ["blocking"]
 );
 
@@ -472,6 +545,7 @@ browser.tabs.onRemoved.addListener(
 browser.windows.onRemoved.addListener(function (windowid){
     saveStorageURLS();
     saveStorageHosts();
+    saveSettings();
 });
 
 
@@ -480,15 +554,77 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
 	switch (request.method)
 	{
     case 'get_enabled':
-        sendResponse(filter);
+        sendResponse(enabled);
         break;
     case 'filterCheck':
-        filter = request.data;
+        enabled = request.data;
+        break;
+
+    case 'set_debug':
+        debug = request.data;
+
+    case 'set_only_scripts':
+        block_only_scripts = request.data;
+        updateBlockTypes();
+        break;
+
+    case 'get_debug':
+        sendResponse(debug);
+        break;
+
+    case 'get_only_scripts':
+        sendResponse(block_only_scripts);
+        break;
+
+    case 'get_blocking_mode':
+        if (debug) {
+            console.debug("[core] Requested blocking mode. Threhsold is " + threshold)
+        }
+        if (threshold == 0.5) {
+            sendResponse("extreme");
+        } else if (threshold == 0.6) {
+            sendResponse("hard");
+        } else if (threshold == 0.75) {
+            sendResponse("normal");
+        } else if (threshold == 0.9) {
+            sendResponse("weak");
+        }
+        break;
+
+    case 'set_blocking_mode':
+        if (request.data) {
+            if (debug) {
+                console.debug("[core] Setting blocking mode to " + request.data)
+            }
+            if (request.data == "extreme") {
+                threshold = 0.5
+            } else if (request.data == "hard") {
+                threshold = 0.6
+            } else if (request.data == "normal") {
+                threshold = 0.75
+            } else if (request.data == "weak") {
+                threshold = 0.9
+            }
+        }
+        break;
+
+    case 'set_permanent_whitelist':
+        if (request.data) {
+            user_allowed_hosts = new Set(request.data)
+            saveStorageHosts()
+        }
+        break;
+    
+    case 'set_session_whitelist': 
+        if (request.data) {
+            console.debug("nothing")
+        }
         break;
 
     case 'get_enabled_SA':
         sendResponse(save_allowed);
         break;
+
     case 'save_allowed_changed':
         save_allowed = request.data;
         break;
@@ -502,6 +638,7 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         }
         saveStorageURLS();
         break;
+
     case 'delete_url_exception':
         if(user_allowed_urls.has(request.data)){
             user_allowed_urls.delete(request.data);
@@ -512,26 +649,30 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         }
         saveStorageURLS();
         break;
+
     // host excepction management
-        case 'add_host_exception':
-            user_allowed_hosts.add(request.data);
-            saveStorageHosts();
-            break;
-        case 'delete_host_exception':
-            if(user_allowed_hosts.has(request.data)){
-                user_allowed_hosts.delete(request.data);
-            }
-            saveStorageHosts();
-            break;
+    case 'add_host_exception':
+        user_allowed_hosts.add(request.data);
+        saveStorageHosts();
+        break;
+        
+    case 'delete_host_exception':
+        if(user_allowed_hosts.has(request.data)){
+            user_allowed_hosts.delete(request.data);
+        }
+        saveStorageHosts();
+        break;
 
     case 'get_allowed_hosts':
         sendResponse(Array.from(user_allowed_hosts));
         break;
+
     case 'get_blocked_urls':
         if(tabsInfo.has(current_tab)){
             sendResponse(tabsInfo.get(current_tab).blocked);
         }
         break;
+
     case 'reload_tab':
         var code = 'window.location.reload();';
         browser.tabs.executeScript(current_tab, {code: code});
