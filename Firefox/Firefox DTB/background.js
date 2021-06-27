@@ -667,8 +667,7 @@ browser.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         break;
 
     case 'reload_tab':
-        var code = 'window.location.reload();';
-        browser.tabs.executeScript(current_tab, {code: code});
+        browser.tabs.reload(current_tab)
         break;
 	}
 
