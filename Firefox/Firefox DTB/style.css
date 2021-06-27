@@ -7,12 +7,16 @@
 h1{
     margin-top: 15px;
     margin-bottom: 0;
-    margin-left: 0;
-    font-family:"Trebuchet MS";
+    font-family:var(--bs-font-sans-serif);
+    color:black;
+    display: inline-block;
+    font-weight: bold;
 }
 
 h3{
-    font-size: 16px;
+    font-size: 18px;
+    font-weight: bold;
+
 }
 h4{
     font-size: 14px;
@@ -22,20 +26,20 @@ body {
     max-width: 600px;
     font-size: 12px;
     margin: 0;
-    color: white;
-    background-image: linear-gradient(to bottom, #cf1b1b, #900d0d);
+    color: black;
+    background-image: linear-gradient(to bottom,white, white);
     padding-bottom: 25px;
 }
 
 div.titleDiv{
-            position: relative;
-            text-align: center;
+    position: relative;
+    text-align: center;
 
 }
 
 div.urls{
-    border-top: 3px groove #900d0d;
-    border-bottom: 3px groove #900d0d;
+    border-top: 3px groove #b74dd2;
+    border-bottom: 3px groove #b74dd2;
     padding: 1em;
     background-color: white;
     color: #423144;
@@ -47,25 +51,31 @@ div.footDiv{
 
 img.logo{
     border-radius: 50%;
-    margin-bottom: 10px;
-    float: left;
+    margin-bottom: 20px;
     margin-left: 20px;
+    margin-right: 70px;
+    display: inline-block;
 }
 
 button.reloadBtn{
   padding: 4px;
+  padding-left: 53px;
+  padding-right: 53px;
   font-size: 12px;
   font-weight: bold;
-  background-color: #cf1b1b;
+  background-color: #b74dd2;
   border-radius: 4px;
   color: white;
   margin-top: 10px;
-  float: right;
   border: none;
+  margin-left: 10px;
+  margin-right: 10px;
+  margin-bottom: 10px;
+
 }
 
 input.unfoldBtn {
-    background-color: #cf1b1b;
+    background-color: #b74dd2;
     border-radius: 4px;
     color: white;
     position: absolute;
@@ -85,6 +95,8 @@ input[type="checkbox"] {
   display: inline-block;
   width: 60px;
   height: 24px;
+  margin-left: 70px;
+
 }
 
 .switch input {display:none;}
@@ -114,11 +126,11 @@ input[type="checkbox"] {
 }
 
 input:checked + .slider {
-  background-color: #2196F3;
+  background-color: #b74dd2;
 }
 
 input:focus + .slider {
-  box-shadow: 0 0 1px #2196F3;
+  box-shadow: 0 0 1px #b74dd2;
 }
 
 input:checked + .slider:before {
@@ -147,7 +159,7 @@ input:checked + .slider:before {
  left: 65%;
  font-size: 12px;
  font-weight: bold;
- font-family: Verdana, sans-serif;
+ font-family: var(--bs-font-sans-serif);
 }
 
 input:checked + .slider:after

@@ -45,7 +45,7 @@ browser.browserAction.setBadgeBackgroundColor({color:'#cf1b1b'});
 
 var debug = true; //define if the debug mode is enabled
 var threshold = 0.75; //threshold for the learning model blocking mode.
-var block_only_scripts = true; //enable or disable media blocking
+var block_only_scripts = false; //enable or disable media blocking
 
 
 loadModel();
@@ -469,7 +469,9 @@ browser.webRequest.onBeforeRequest.addListener(
                     let encoder = new TextEncoder();
                     //data = encoder.encode("replace test")
                     data = await getReplacementFile(isTracking[1])
-                    
+                    var enc = new TextEncoder();
+                    data = enc.encode(data);
+                    console.debug(content)
                     if (debug) {
                         console.debug("[HASH+REPLACE]" + request_url)
                     }
@@ -485,17 +487,8 @@ browser.webRequest.onBeforeRequest.addListener(
         }
 
         async function writeFilter(isTracking,replace,data) {
-            if (isTracking) {
-                if (replace) {
-                    // filterReq.write(data);
-                }
-                // canviar estat a blocked?
-                filterReq.close();
-                
-            } else {
-                filterReq.write(data);
-                filterReq.close();
-            }
+            filterReq.write(data);
+            filterReq.close();
         }
     },
     {urls: ["<all_urls>"], types: block_types },

@@ -21,49 +21,40 @@
   <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css"> 
   <meta http-equiv="content-type" content="text/html; charset=utf-8" />
   <head>
-      <title>Deep Tracking Blocker</title>
+      <title>DTB+</title>
       <script type="resource_scripts/jquery-3.5.1.min.js"></script>
       <link rel="stylesheet" href="style.css">
   </head>
   <body>
         <div id="title" class="titleDiv">
-            <div align="middle">
-                <img class="logo" src="icons/icon_w64.png" alt="iconoextension" width="64" height="64"/>
-                <h1> Deep Tracking Blocker</h1>
+            <div align="left">
+                <img class="logo" src="icons/icon_w64.png" alt="iconoextension" width="50" height="50"/>
+                <h1>DTB+</h1>
+                <label class="switch" >
+                    <input type="checkbox" id="onoffButton" name="onoffButton" value="On">
+                    <div class="slider round"></div>
+                </label>  
             </div>
-            <br>
-            <label class="switch" >
-                <input type="checkbox" id="onoffButton" name="onoffButton" value="On">
-                <div class="slider round"></div>
-            </label>  
- 
         </div>
-        <br>
-
-            <div class="slidecontainer">
-                <input type="range" min="1" max="100" value="70" class="slider" id="myRange">
-            </div>        
-
-        <br>
 
         <div id="blocked_urls" class="urls">
-            <button id="btnTabReload" class="reloadBtn" type="submit" name="btnTabReload" value="reload">
-                <img src="icons/reload_iconw.png" width="12px" height="12px"> Reload tab
-            </button>
-            <button id="btnSettings" class="reloadBtn" type="submit" name="btnSettings" value="settings">
-                <img src="icons/reload_iconw.png" width="5px" height="10px"> Settings
-            </button>
-            <h3> Blocked urls: </h3>
+            <h3> Blocked urls </h3>
             If checkbox is checked, that url/host is allowed.
             <br>
         </div>
-
-        <br>
 
         <div class="footDiv">
             <br>
             <input type="checkbox" id="saveButton" name="saveButton" value="save" checked>
             <label for="saveButton"> <b>Save changes between browser sessions</b> </label><br>
+            <div>
+                <button id="btnTabReload" class="reloadBtn" type="submit" name="btnTabReload" value="reload">
+                    <img src="icons/reload_iconw.png" width="12px" height="12px"> Reload tab
+                </button>
+                <button id="btnSettings" class="reloadBtn" type="submit" name="btnSettings" value="settings">
+                    Settings
+                </button>
+            </div>
         </div>
 
   </body>
